@@ -413,4 +413,7 @@
 #define	LINUX32_SYS_linux_set_mempolicy_home_node	450
 #define	LINUX32_SYS_linux_cachestat	451
 #define	LINUX32_SYS_linux_fchmodat2	452
-#define	LINUX32_SYS_MAXSYSCALL	453
+#define	LINUX32_SYS_linux_futex_wake	454
+#define	LINUX32_SYS_linux_futex_wait	455
+#define	LINUX32_SYS_linux_futex_requeue	456
+#define	LINUX32_SYS_MAXSYSCALL	457
