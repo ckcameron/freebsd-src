@@ -1739,6 +1739,12 @@ struct linux_cachestat_args {
 struct linux_fchmodat2_args {
 	syscallarg_t dummy;
 };
+struct linux_futex_wake_args {
+	char uaddr_l_[PADL_(uint32_t *)]; uint32_t * uaddr; char uaddr_r_[PADR_(uint32_t *)];
+	char mask_l_[PADL_(l_ulong)]; l_ulong mask; char mask_r_[PADR_(l_ulong)];
+	char nr_l_[PADL_(l_int)]; l_int nr; char nr_r_[PADR_(l_int)];
+	char flags_l_[PADL_(l_uint)]; l_uint flags; char flags_r_[PADR_(l_uint)];
+};
 int	linux_exit(struct thread *, struct linux_exit_args *);
 int	linux_fork(struct thread *, struct linux_fork_args *);
 int	linux_write(struct thread *, struct linux_write_args *);
@@ -2113,6 +2119,7 @@ int	linux_futex_waitv(struct thread *, struct linux_futex_waitv_args *);
 int	linux_set_mempolicy_home_node(struct thread *, struct linux_set_mempolicy_home_node_args *);
 int	linux_cachestat(struct thread *, struct linux_cachestat_args *);
 int	linux_fchmodat2(struct thread *, struct linux_fchmodat2_args *);
+int	linux_futex_wake(struct thread *, struct linux_futex_wake_args *);
 #define	LINUX32_SYS_AUE_linux_exit	AUE_EXIT
 #define	LINUX32_SYS_AUE_linux_fork	AUE_FORK
 #define	LINUX32_SYS_AUE_linux_write	AUE_NULL
@@ -2487,6 +2494,7 @@ int	linux_fchmodat2(struct thread *, struct linux_fchmodat2_args *);
 #define	LINUX32_SYS_AUE_linux_set_mempolicy_home_node	AUE_NULL
 #define	LINUX32_SYS_AUE_linux_cachestat	AUE_NULL
 #define	LINUX32_SYS_AUE_linux_fchmodat2	AUE_NULL
+#define	LINUX32_SYS_AUE_linux_futex_wake	AUE_NULL
 
 #undef PAD_
 #undef PADL_

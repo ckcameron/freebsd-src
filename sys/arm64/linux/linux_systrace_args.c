@@ -2431,6 +2431,16 @@ systrace_args(int sysnum, void *params, uint64_t *uarg, int *n_args)
 		*n_args = 0;
 		break;
 	}
+	/* linux_futex_wake */
+	case 454: {
+		struct linux_futex_wake_args *p = params;
+		uarg[a++] = (intptr_t)p->uaddr; /* uint32_t * */
+		iarg[a++] = p->mask; /* l_ulong */
+		iarg[a++] = p->nr; /* l_int */
+		iarg[a++] = p->flags; /* l_uint */
+		*n_args = 4;
+		break;
+	}
 	default:
 		*n_args = 0;
 		break;
@@ -6369,6 +6379,25 @@ systrace_entry_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 	/* linux_fchmodat2 */
 	case 452:
 		break;
+	/* linux_futex_wake */
+	case 454:
+		switch (ndx) {
+		case 0:
+			p = "userland uint32_t *";
+			break;
+		case 1:
+			p = "l_ulong";
+			break;
+		case 2:
+			p = "l_int";
+			break;
+		case 3:
+			p = "l_uint";
+			break;
+		default:
+			break;
+		};
+		break;
 	default:
 		break;
 	};
@@ -7679,6 +7708,11 @@ systrace_return_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 	case 451:
 	/* linux_fchmodat2 */
 	case 452:
+	/* linux_futex_wake */
+	case 454:
+		if (ndx == 0 || ndx == 1)
+			p = "int";
+		break;
 	default:
 		break;
 	};

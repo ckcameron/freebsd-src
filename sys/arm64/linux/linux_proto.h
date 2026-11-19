@@ -1248,6 +1248,12 @@ struct linux_cachestat_args {
 struct linux_fchmodat2_args {
 	syscallarg_t dummy;
 };
+struct linux_futex_wake_args {
+	char uaddr_l_[PADL_(uint32_t *)]; uint32_t * uaddr; char uaddr_r_[PADR_(uint32_t *)];
+	char mask_l_[PADL_(l_ulong)]; l_ulong mask; char mask_r_[PADR_(l_ulong)];
+	char nr_l_[PADL_(l_int)]; l_int nr; char nr_r_[PADR_(l_int)];
+	char flags_l_[PADL_(l_uint)]; l_uint flags; char flags_r_[PADR_(l_uint)];
+};
 int	linux_setxattr(struct thread *, struct linux_setxattr_args *);
 int	linux_lsetxattr(struct thread *, struct linux_lsetxattr_args *);
 int	linux_fsetxattr(struct thread *, struct linux_fsetxattr_args *);
@@ -1508,6 +1514,7 @@ int	linux_futex_waitv(struct thread *, struct linux_futex_waitv_args *);
 int	linux_set_mempolicy_home_node(struct thread *, struct linux_set_mempolicy_home_node_args *);
 int	linux_cachestat(struct thread *, struct linux_cachestat_args *);
 int	linux_fchmodat2(struct thread *, struct linux_fchmodat2_args *);
+int	linux_futex_wake(struct thread *, struct linux_futex_wake_args *);
 #define	LINUX_SYS_AUE_linux_setxattr	AUE_NULL
 #define	LINUX_SYS_AUE_linux_lsetxattr	AUE_NULL
 #define	LINUX_SYS_AUE_linux_fsetxattr	AUE_NULL
@@ -1768,6 +1775,7 @@ int	linux_fchmodat2(struct thread *, struct linux_fchmodat2_args *);
 #define	LINUX_SYS_AUE_linux_set_mempolicy_home_node	AUE_NULL
 #define	LINUX_SYS_AUE_linux_cachestat	AUE_NULL
 #define	LINUX_SYS_AUE_linux_fchmodat2	AUE_NULL
+#define	LINUX_SYS_AUE_linux_futex_wake	AUE_NULL
 
 #undef PAD_
 #undef PADL_
