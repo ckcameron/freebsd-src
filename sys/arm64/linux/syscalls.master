@@ -1870,4 +1870,16 @@
 		int linux_fchmodat2(void);
 	}
 
+; Linux 6.6 (not implemented on this ABI):
+453	AUE_NULL	UNIMPL	linux_map_shadow_stack
+; Linux 6.7:
+454	AUE_NULL	STD {
+		int linux_futex_wake(
+		    uint32_t *uaddr,
+		    l_ulong mask,
+		    l_int nr,
+		    l_uint flags
+		);
+	}
+
  ; vim: syntax=off

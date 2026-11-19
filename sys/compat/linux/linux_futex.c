@@ -73,6 +73,7 @@ struct linux_futex_args {
 	uint32_t	*uaddr2;
 	uint32_t	val3;
 	bool		val3_compare;
+	bool		strict_wake;
 	struct timespec	kts;
 };
 
@@ -81,7 +82,7 @@ static void linux_umtx_abs_timeout_init(struct umtx_abs_timeout *,
 	    struct linux_futex_args *);
 static int linux_futex(struct thread *, struct linux_futex_args *);
 static int linux_futex_wait(struct thread *, struct linux_futex_args *);
-static int linux_futex_wake(struct thread *, struct linux_futex_args *);
+static int linux_futex_wake_impl(struct thread *, struct linux_futex_args *);
 static int linux_futex_requeue(struct thread *, struct linux_futex_args *);
 static int linux_futex_wakeop(struct thread *, struct linux_futex_args *);
 static int linux_futex_lock_pi(struct thread *, bool, struct linux_futex_args *);
@@ -111,7 +112,7 @@ futex_wake(struct thread *td, uint32_t *uaddr, int val, bool shared)
 	args.val = val;
 	args.val3 = FUTEX_BITSET_MATCH_ANY;
 
-	return (linux_futex_wake(td, &args));
+	return (linux_futex_wake_impl(td, &args));
 }
 
 static int
@@ -230,7 +231,7 @@ linux_futex(struct thread *td, struct linux_futex_args *args)
 		LINUX_CTR3(sys_futex, "WAKE uaddr %p nrwake 0x%x bitset 0x%x",
 		    args->uaddr, args->val, args->val3);
 
-		return (linux_futex_wake(td, args));
+		return (linux_futex_wake_impl(td, args));
 
 	case LINUX_FUTEX_REQUEUE:
 		/*
@@ -720,7 +721,7 @@ linux_futex_requeue(struct thread *td, struct linux_futex_args *args)
 }
 
 static int
-linux_futex_wake(struct thread *td, struct linux_futex_args *args)
+linux_futex_wake_impl(struct thread *td, struct linux_futex_args *args)
 {
 	struct umtx_key key;
 	int error;
@@ -731,6 +732,11 @@ linux_futex_wake(struct thread *td, struct linux_futex_args *args)
 	error = futex_key_get(args->uaddr, TYPE_FUTEX, GET_SHARED(args), &key);
 	if (error != 0)
 		return (error);
+	if (args->strict_wake && args->val == 0) {
+		umtx_key_release(&key);
+		td->td_retval[0] = 0;
+		return (0);
+	}
 	umtxq_lock(&key);
 	td->td_retval[0] = umtxq_signal_mask(&key, args->val, args->val3);
 	umtxq_unlock(&key);
@@ -803,6 +809,36 @@ linux_umtx_abs_timeout_init(struct umtx_abs_timeout *timo,
 	clockid = args->clockrt ? CLOCK_REALTIME : CLOCK_MONOTONIC;
 	absolute = args->op == LINUX_FUTEX_WAIT ? false : true;
 	umtx_abs_timeout_init(timo, clockid, absolute, args->ts);
+}
+
+/*
+ * Linux futex2 futex_wake(2) (syscall 454).
+ * The Linuxulator umtx implementation supports 32-bit futex words only.
+ * Reject sizes and extensions we cannot implement rather than silently
+ * providing incorrect synchronization semantics.
+ */
+int
+linux_futex_wake(struct thread *td, struct linux_futex_wake_args *args)
+{
+	struct linux_futex_args fargs;
+
+	if ((args->flags & LINUX_FUTEX2_SIZE_MASK) !=
+	    LINUX_FUTEX2_SIZE_U32 ||
+	    (args->flags & ~(LINUX_FUTEX2_SIZE_MASK |
+	    LINUX_FUTEX2_PRIVATE)) != 0 ||
+	    args->mask != (uint32_t)args->mask)
+		return (EINVAL);
+
+	bzero(&fargs, sizeof(fargs));
+	fargs.uaddr = args->uaddr;
+	fargs.op = LINUX_FUTEX_WAKE_BITSET;
+	if ((args->flags & LINUX_FUTEX2_PRIVATE) != 0)
+		fargs.op |= LINUX_FUTEX_PRIVATE_FLAG;
+	/* Linux strict futex2 wakes at most one thread for nr < 0. */
+	fargs.val = args->nr < 0 ? 1 : args->nr;
+	fargs.val3 = (uint32_t)args->mask;
+	fargs.strict_wake = true;
+	return (linux_futex(td, &fargs));
 }
 
 int
