@@ -3338,7 +3338,13 @@ systrace_args(int sysnum, void *params, uint64_t *uarg, int *n_args)
 	}
 	/* linux_futex_waitv */
 	case 449: {
-		*n_args = 0;
+		struct linux_futex_waitv_args *p = params;
+		uarg[a++] = (intptr_t)p->waiters; /* const struct linux_futex_waitv * */
+		iarg[a++] = p->nr_futexes; /* l_uint */
+		iarg[a++] = p->flags; /* l_uint */
+		uarg[a++] = (intptr_t)p->timeout; /* const struct linux_futex2_timespec * */
+		iarg[a++] = p->clockid; /* l_int */
+		*n_args = 5;
 		break;
 	}
 	/* linux_set_mempolicy_home_node */
@@ -3363,6 +3369,28 @@ systrace_args(int sysnum, void *params, uint64_t *uarg, int *n_args)
 		iarg[a++] = p->mask; /* l_ulong */
 		iarg[a++] = p->nr; /* l_int */
 		iarg[a++] = p->flags; /* l_uint */
+		*n_args = 4;
+		break;
+	}
+	/* linux_futex_wait */
+	case 455: {
+		struct linux_futex_wait_args *p = params;
+		uarg[a++] = (intptr_t)p->uaddr; /* uint32_t * */
+		iarg[a++] = p->val; /* l_ulong */
+		iarg[a++] = p->mask; /* l_ulong */
+		iarg[a++] = p->flags; /* l_uint */
+		uarg[a++] = (intptr_t)p->timeout; /* const struct linux_futex2_timespec * */
+		iarg[a++] = p->clockid; /* l_int */
+		*n_args = 6;
+		break;
+	}
+	/* linux_futex_requeue */
+	case 456: {
+		struct linux_futex_requeue_args *p = params;
+		uarg[a++] = (intptr_t)p->waiters; /* const struct linux_futex_waitv * */
+		iarg[a++] = p->flags; /* l_uint */
+		iarg[a++] = p->nr_wake; /* l_int */
+		iarg[a++] = p->nr_requeue; /* l_int */
 		*n_args = 4;
 		break;
 	}
@@ -8738,6 +8766,25 @@ systrace_entry_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 		break;
 	/* linux_futex_waitv */
 	case 449:
+		switch (ndx) {
+		case 0:
+			p = "userland const struct linux_futex_waitv *";
+			break;
+		case 1:
+			p = "l_uint";
+			break;
+		case 2:
+			p = "l_uint";
+			break;
+		case 3:
+			p = "userland const struct linux_futex2_timespec *";
+			break;
+		case 4:
+			p = "l_int";
+			break;
+		default:
+			break;
+		};
 		break;
 	/* linux_set_mempolicy_home_node */
 	case 450:
@@ -8762,6 +8809,50 @@ systrace_entry_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 			break;
 		case 3:
 			p = "l_uint";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* linux_futex_wait */
+	case 455:
+		switch (ndx) {
+		case 0:
+			p = "userland uint32_t *";
+			break;
+		case 1:
+			p = "l_ulong";
+			break;
+		case 2:
+			p = "l_ulong";
+			break;
+		case 3:
+			p = "l_uint";
+			break;
+		case 4:
+			p = "userland const struct linux_futex2_timespec *";
+			break;
+		case 5:
+			p = "l_int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* linux_futex_requeue */
+	case 456:
+		switch (ndx) {
+		case 0:
+			p = "userland const struct linux_futex_waitv *";
+			break;
+		case 1:
+			p = "l_uint";
+			break;
+		case 2:
+			p = "l_int";
+			break;
+		case 3:
+			p = "l_int";
 			break;
 		default:
 			break;
@@ -10608,6 +10699,13 @@ systrace_return_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 	case 452:
 	/* linux_futex_wake */
 	case 454:
+		if (ndx == 0 || ndx == 1)
+			p = "int";
+		break;
+	/* linux_futex_wait */
+	case 455:
+	/* linux_futex_requeue */
+	case 456:
 		if (ndx == 0 || ndx == 1)
 			p = "int";
 		break;

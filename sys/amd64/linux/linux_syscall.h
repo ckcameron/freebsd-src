@@ -355,4 +355,6 @@
 #define	LINUX_SYS_linux_fchmodat2	452
 #define	LINUX_SYS_linux_map_shadow_stack	453
 #define	LINUX_SYS_linux_futex_wake	454
-#define	LINUX_SYS_MAXSYSCALL	455
+#define	LINUX_SYS_linux_futex_wait	455
+#define	LINUX_SYS_linux_futex_requeue	456
+#define	LINUX_SYS_MAXSYSCALL	457

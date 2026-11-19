@@ -571,6 +571,35 @@ umtxq_count_pi(struct umtx_key *key, struct umtx_q **first)
 }
 
 /*
+ * Wake a single-vector or a group waiter.  The caller holds the key's
+ * umtxq-chain mutex.  A group must be notified before its member is freed;
+ * the waiter removes every member under the corresponding chain mutex.
+ *
+ * Lock order: umtxq chain -> group.  Waiters never take a chain mutex while
+ * holding ug_lock.
+ */
+static void
+umtxq_notify(struct umtx_q *uq, bool one)
+{
+	struct umtxq_group *group;
+
+	group = uq->uq_group;
+	if (group == NULL) {
+		if (one)
+			wakeup_one(uq);
+		else
+			wakeup(uq);
+		return;
+	}
+	mtx_lock(&group->ug_lock);
+	if (group->ug_woken == -1) {
+		group->ug_woken = uq->uq_group_index;
+		wakeup(group);
+	}
+	mtx_unlock(&group->ug_lock);
+}
+
+/*
  * Wake up threads waiting on an userland object by a bit mask.
  */
 int
@@ -589,7 +618,7 @@ umtxq_signal_mask(struct umtx_key *key, int n_wake, u_int bitset)
 		if ((uq->uq_bitset & bitset) == 0)
 			continue;
 		umtxq_remove_queue(uq, UMTX_SHARED_QUEUE);
-		wakeup_one(uq);
+		umtxq_notify(uq, true);
 		if (++ret >= n_wake)
 			break;
 	}
@@ -613,7 +642,7 @@ umtxq_signal_queue(struct umtx_key *key, int n_wake, int q)
 	if (uh != NULL) {
 		while ((uq = TAILQ_FIRST(&uh->head)) != NULL) {
 			umtxq_remove_queue(uq, q);
-			wakeup(uq);
+			umtxq_notify(uq, false);
 			if (++ret >= n_wake)
 				return (ret);
 		}
@@ -630,7 +659,7 @@ umtxq_signal_thread(struct umtx_q *uq)
 
 	UMTXQ_LOCKED_ASSERT(umtxq_getchain(&uq->uq_key));
 	umtxq_remove(uq);
-	wakeup(uq);
+	umtxq_notify(uq, false);
 }
 
 /*
@@ -646,27 +675,41 @@ umtxq_requeue(struct umtx_key *key, int n_wake, struct umtx_key *key2,
 {
 	struct umtxq_queue *uh;
 	struct umtx_q *uq, *uq_temp;
-	int ret;
+	int woken, moved;
 
-	ret = 0;
 	UMTXQ_LOCKED_ASSERT(umtxq_getchain(key));
 	UMTXQ_LOCKED_ASSERT(umtxq_getchain(key2));
+	if (n_wake <= 0 && n_requeue <= 0)
+		return (0);
+	woken = moved = 0;
 	uh = umtxq_queue_lookup(key, UMTX_SHARED_QUEUE);
 	if (uh == NULL)
 		return (0);
 	TAILQ_FOREACH_SAFE(uq, &uh->head, uq_link, uq_temp) {
-		if (++ret <= n_wake) {
+		if (woken >= n_wake && moved >= n_requeue)
+			break;
+		if (woken < n_wake) {
 			umtxq_remove(uq);
-			wakeup_one(uq);
+			umtxq_notify(uq, true);
+			woken++;
+		} else if (uq->uq_group != NULL) {
+			/*
+			 * A group waiter owns multiple keyed registrations.  It cannot
+			 * safely transfer its key's VM-object reference while the
+			 * umtx chain is locked.  Wake it instead of relocating it.
+			 * This is a known futex_waitv/requeue interoperability limit.
+			 */
+			umtxq_remove(uq);
+			umtxq_notify(uq, true);
+			moved++;
 		} else {
 			umtxq_remove(uq);
 			uq->uq_key = *key2;
 			umtxq_insert(uq);
-			if (ret - n_wake == n_requeue)
-				break;
+			moved++;
 		}
 	}
-	return (ret);
+	return (woken + moved);
 }
 
 static inline int
@@ -910,6 +953,53 @@ umtxq_sleep(struct umtx_q *uq, const char *wmesg,
 		}
 	}
 
+	curthread->td_rtcgen = 0;
+	return (error);
+}
+
+
+/*
+ * Sleep until a futex_waitv member is removed by a waker.  The group's
+ * mutex closes the wake-before-sleep race across multiple umtxq chains.
+ * The caller has inserted all member queues before entering here.
+ */
+int
+umtxq_group_sleep(struct umtxq_group *group, struct umtx_abs_timeout *timo)
+{
+	sbintime_t sbt;
+	int error, flags;
+
+	error = 0;
+	mtx_lock(&group->ug_lock);
+	while (group->ug_woken == -1) {
+		sbt = 0;
+		flags = 0;
+		if (timo != NULL) {
+			if (timo->is_abs_real)
+				curthread->td_rtcgen =
+				    atomic_load_acq_int(&rtc_generation);
+			error = umtx_abs_timeout_getsbt(timo, &sbt, &flags);
+			if (error != 0)
+				break;
+			if ((flags & C_ABSOLUTE) != 0 && sbt == 0) {
+				error = ETIMEDOUT;
+				break;
+			}
+		}
+		error = msleep_sbt(group, &group->ug_lock, PCATCH, "futexv",
+		    sbt, 0, flags);
+		if (error == EINTR || error == ERESTART)
+			break;
+		if (error == EWOULDBLOCK) {
+			error = ETIMEDOUT;
+			break;
+		}
+		if (error != 0)
+			break;
+	}
+	if (group->ug_woken != -1)
+		error = 0;
+	mtx_unlock(&group->ug_lock);
 	curthread->td_rtcgen = 0;
 	return (error);
 }

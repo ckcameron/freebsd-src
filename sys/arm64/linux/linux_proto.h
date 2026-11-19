@@ -1237,7 +1237,11 @@ struct linux_process_mrelease_args {
 	syscallarg_t dummy;
 };
 struct linux_futex_waitv_args {
-	syscallarg_t dummy;
+	char waiters_l_[PADL_(const struct linux_futex_waitv *)]; const struct linux_futex_waitv * waiters; char waiters_r_[PADR_(const struct linux_futex_waitv *)];
+	char nr_futexes_l_[PADL_(l_uint)]; l_uint nr_futexes; char nr_futexes_r_[PADR_(l_uint)];
+	char flags_l_[PADL_(l_uint)]; l_uint flags; char flags_r_[PADR_(l_uint)];
+	char timeout_l_[PADL_(const struct linux_futex2_timespec *)]; const struct linux_futex2_timespec * timeout; char timeout_r_[PADR_(const struct linux_futex2_timespec *)];
+	char clockid_l_[PADL_(l_int)]; l_int clockid; char clockid_r_[PADR_(l_int)];
 };
 struct linux_set_mempolicy_home_node_args {
 	syscallarg_t dummy;
@@ -1253,6 +1257,20 @@ struct linux_futex_wake_args {
 	char mask_l_[PADL_(l_ulong)]; l_ulong mask; char mask_r_[PADR_(l_ulong)];
 	char nr_l_[PADL_(l_int)]; l_int nr; char nr_r_[PADR_(l_int)];
 	char flags_l_[PADL_(l_uint)]; l_uint flags; char flags_r_[PADR_(l_uint)];
+};
+struct linux_futex_wait_args {
+	char uaddr_l_[PADL_(uint32_t *)]; uint32_t * uaddr; char uaddr_r_[PADR_(uint32_t *)];
+	char val_l_[PADL_(l_ulong)]; l_ulong val; char val_r_[PADR_(l_ulong)];
+	char mask_l_[PADL_(l_ulong)]; l_ulong mask; char mask_r_[PADR_(l_ulong)];
+	char flags_l_[PADL_(l_uint)]; l_uint flags; char flags_r_[PADR_(l_uint)];
+	char timeout_l_[PADL_(const struct linux_futex2_timespec *)]; const struct linux_futex2_timespec * timeout; char timeout_r_[PADR_(const struct linux_futex2_timespec *)];
+	char clockid_l_[PADL_(l_int)]; l_int clockid; char clockid_r_[PADR_(l_int)];
+};
+struct linux_futex_requeue_args {
+	char waiters_l_[PADL_(const struct linux_futex_waitv *)]; const struct linux_futex_waitv * waiters; char waiters_r_[PADR_(const struct linux_futex_waitv *)];
+	char flags_l_[PADL_(l_uint)]; l_uint flags; char flags_r_[PADR_(l_uint)];
+	char nr_wake_l_[PADL_(l_int)]; l_int nr_wake; char nr_wake_r_[PADR_(l_int)];
+	char nr_requeue_l_[PADL_(l_int)]; l_int nr_requeue; char nr_requeue_r_[PADR_(l_int)];
 };
 int	linux_setxattr(struct thread *, struct linux_setxattr_args *);
 int	linux_lsetxattr(struct thread *, struct linux_lsetxattr_args *);
@@ -1515,6 +1533,8 @@ int	linux_set_mempolicy_home_node(struct thread *, struct linux_set_mempolicy_ho
 int	linux_cachestat(struct thread *, struct linux_cachestat_args *);
 int	linux_fchmodat2(struct thread *, struct linux_fchmodat2_args *);
 int	linux_futex_wake(struct thread *, struct linux_futex_wake_args *);
+int	linux_futex_wait(struct thread *, struct linux_futex_wait_args *);
+int	linux_futex_requeue(struct thread *, struct linux_futex_requeue_args *);
 #define	LINUX_SYS_AUE_linux_setxattr	AUE_NULL
 #define	LINUX_SYS_AUE_linux_lsetxattr	AUE_NULL
 #define	LINUX_SYS_AUE_linux_fsetxattr	AUE_NULL
@@ -1776,6 +1796,8 @@ int	linux_futex_wake(struct thread *, struct linux_futex_wake_args *);
 #define	LINUX_SYS_AUE_linux_cachestat	AUE_NULL
 #define	LINUX_SYS_AUE_linux_fchmodat2	AUE_NULL
 #define	LINUX_SYS_AUE_linux_futex_wake	AUE_NULL
+#define	LINUX_SYS_AUE_linux_futex_wait	AUE_NULL
+#define	LINUX_SYS_AUE_linux_futex_requeue	AUE_NULL
 
 #undef PAD_
 #undef PADL_

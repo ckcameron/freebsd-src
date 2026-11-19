@@ -460,4 +460,6 @@ const char *linux_syscallnames[] = {
 	"linux_fchmodat2",			/* 452 = linux_fchmodat2 */
 	"#453",			/* 453 = linux_map_shadow_stack */
 	"linux_futex_wake",			/* 454 = linux_futex_wake */
+	"linux_futex_wait",			/* 455 = linux_futex_wait */
+	"linux_futex_requeue",			/* 456 = linux_futex_requeue */
 };

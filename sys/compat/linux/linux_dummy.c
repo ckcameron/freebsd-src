@@ -142,7 +142,6 @@ DUMMY(quotactl_fd);
 /* Linux 5.15: */
 DUMMY(process_mrelease);
 /* Linux 5.16: */
-DUMMY(futex_waitv);
 DUMMY(set_mempolicy_home_node);
 /* Linux 6.5: */
 DUMMY(cachestat);

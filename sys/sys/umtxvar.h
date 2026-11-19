@@ -109,6 +109,15 @@ struct umtx_pi {
 	struct umtx_key		pi_key;
 };
 
+/*
+ * Multi-key futex wait state.  Wakeup is serialized by ug_lock so a wake
+ * arriving between queue insertion and the actual sleep cannot be lost.
+ */
+struct umtxq_group {
+	struct mtx	ug_lock;
+	int		ug_woken;	/* -1 until one registered key wakes */
+};
+
 /* A userland synchronous object user. */
 struct umtx_q {
 	/* Linked list for the hash. */
@@ -126,6 +135,10 @@ struct umtx_q {
 
 	/* The thread waits on. */
 	struct thread		*uq_thread;
+
+	/* Optional futex_waitv group; normal umtx waiters leave this NULL. */
+	struct umtxq_group	*uq_group;
+	int			uq_group_index;
 
 	/*
 	 * Blocked on PI mutex. read can use chain lock
@@ -216,6 +229,7 @@ int umtxq_requeue(struct umtx_key *, int, struct umtx_key *, int);
 int umtxq_signal_mask(struct umtx_key *, int, u_int);
 int umtxq_sleep(struct umtx_q *, const char *,
     struct umtx_abs_timeout *);
+int umtxq_group_sleep(struct umtxq_group *, struct umtx_abs_timeout *);
 int umtxq_sleep_pi(struct umtx_q *, struct umtx_pi *, uint32_t,
     const char *, struct umtx_abs_timeout *, bool);
 void umtxq_unbusy(struct umtx_key *);

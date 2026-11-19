@@ -2619,7 +2619,13 @@
 	}
 ; Linux 5.16:
 449	AUE_NULL		STD {
-		int linux_futex_waitv(void);
+		int linux_futex_waitv(
+		    const struct linux_futex_waitv *waiters,
+		    l_uint nr_futexes,
+		    l_uint flags,
+		    const struct linux_futex2_timespec *timeout,
+		    l_int clockid
+		);
 	}
 ; Linux 5.17:
 450	AUE_NULL		STD {
@@ -2643,6 +2649,26 @@
 		    l_ulong mask,
 		    l_int nr,
 		    l_uint flags
+		);
+	}
+
+; Linux 6.7:
+455	AUE_NULL	STD {
+		int linux_futex_wait(
+		    uint32_t *uaddr,
+		    l_ulong val,
+		    l_ulong mask,
+		    l_uint flags,
+		    const struct linux_futex2_timespec *timeout,
+		    l_int clockid
+		);
+	}
+456	AUE_NULL	STD {
+		int linux_futex_requeue(
+		    const struct linux_futex_waitv *waiters,
+		    l_uint flags,
+		    l_int nr_wake,
+		    l_int nr_requeue
 		);
 	}
 

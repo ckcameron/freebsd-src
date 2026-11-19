@@ -57,6 +57,21 @@
 #define LINUX_FUTEX2_SIZE_MASK	0x03
 #define LINUX_FUTEX2_SIZE_U32	0x02
 #define LINUX_FUTEX2_PRIVATE	LINUX_FUTEX_PRIVATE_FLAG
+#define LINUX_FUTEX2_WAITV_MAX	128
+
+/* Explicit Linux userspace ABI layout, also for 32-bit Linux emulation. */
+struct linux_futex_waitv {
+	uint64_t	val;
+	uint64_t	uaddr;
+	uint32_t	flags;
+	uint32_t	__reserved;
+};
+
+struct linux_futex2_timespec {
+	int64_t		tv_sec;
+	int64_t		tv_nsec;
+};
+
 #define LINUX_FUTEX_CLOCK_REALTIME	256
 
 #define LINUX_FUTEX_CMD_MASK		~(LINUX_FUTEX_PRIVATE_FLAG | \
